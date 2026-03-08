@@ -6,14 +6,14 @@ import {
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
-import {
-  declareAndBind,
-  SimpleQueueType,
-} from "../internal/pubsub/declareAndBind.js";
-import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
-import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
+import { commandSpawn } from "../internal/gamelogic/spawn.js";
+import { declareAndBind } from "../internal/pubsub/declareAndBind.js";
+import { SimpleQueueType } from "../internal/pubsub/enums.js";
+import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { subscribeJSON } from "../internal/pubsub/subscribeJSON.js";
+import { handlerPause } from "./handlers.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -24,15 +24,26 @@ async function main() {
 
   const username = await clientWelcome();
 
+  const queueName = `pause.${username}`;
+
   const [channel, queue] = await declareAndBind(
     conn,
     ExchangePerilDirect,
-    `pause.${username}`,
+    queueName,
     PauseKey,
     SimpleQueueType.Transient,
   );
 
-  const state = new GameState(username);
+  const gs = new GameState(username);
+
+  await subscribeJSON(
+    conn,
+    ExchangePerilDirect,
+    queueName,
+    PauseKey,
+    SimpleQueueType.Transient,
+    handlerPause(gs),
+  );
 
   while (true) {
     const words = await getInput();
@@ -43,15 +54,23 @@ async function main() {
 
     switch (command) {
       case "spawn":
-        commandSpawn(state, words);
+        try {
+          commandSpawn(gs, words);
+        } catch (err) {
+          console.log((err as Error).message);
+        }
         break;
 
       case "move":
-        commandMove(state, words);
+        try {
+          commandMove(gs, words);
+        } catch (err) {
+          console.log((err as Error).message);
+        }
         break;
 
       case "status":
-        await commandStatus(state);
+        await commandStatus(gs);
         break;
 
       case "help":

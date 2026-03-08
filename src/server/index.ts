@@ -8,10 +8,8 @@ import {
 } from "../internal/routing/routing.js";
 import type { PlayingState } from "../internal/gamelogic/gamestate.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
-import {
-  declareAndBind,
-  SimpleQueueType,
-} from "../internal/pubsub/declareAndBind.js";
+import { declareAndBind } from "../internal/pubsub/declareAndBind.js";
+import { SimpleQueueType } from "../internal/pubsub/enums.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";

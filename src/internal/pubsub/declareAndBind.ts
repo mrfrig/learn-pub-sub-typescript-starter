@@ -1,9 +1,5 @@
 import amqp, { type Channel } from "amqplib";
-
-export enum SimpleQueueType {
-  Durable,
-  Transient,
-}
+import { SimpleQueueType } from "./enums.js";
 
 export async function declareAndBind(
   conn: amqp.ChannelModel,
@@ -12,7 +8,6 @@ export async function declareAndBind(
   key: string,
   queueType: SimpleQueueType,
 ): Promise<[Channel, amqp.Replies.AssertQueue]> {
-
   const channel = await conn.createChannel();
   const queue = await channel.assertQueue(queueName, {
     durable: queueType === SimpleQueueType.Durable,
