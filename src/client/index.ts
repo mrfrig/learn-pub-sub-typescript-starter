@@ -11,16 +11,15 @@ import { commandMove } from "../internal/gamelogic/move.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { declareAndBind } from "../internal/pubsub/declareAndBind.js";
 import { SimpleQueueType } from "../internal/pubsub/enums.js";
+import { publishJSON } from "../internal/pubsub/publishJSON.js";
+import { subscribeJSON } from "../internal/pubsub/subscribeJSON.js";
 import {
   ArmyMovesPrefix,
   ExchangePerilDirect,
   ExchangePerilTopic,
   PauseKey,
 } from "../internal/routing/routing.js";
-import { subscribeJSON } from "../internal/pubsub/subscribeJSON.js";
 import { handlerMove, handlerPause } from "./handlers.js";
-import { publishJSON } from "../internal/pubsub/publishJSON.js";
-import type { ArmyMove } from "../internal/gamelogic/gamedata.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
