@@ -9,7 +9,6 @@ import {
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
-import { declareAndBind } from "../internal/pubsub/declareAndBind.js";
 import { SimpleQueueType } from "../internal/pubsub/enums.js";
 import { publishJSON } from "../internal/pubsub/publishJSON.js";
 import { subscribeJSON } from "../internal/pubsub/subscribeJSON.js";
@@ -23,44 +22,42 @@ import { handlerMove, handlerPause } from "./handlers.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
-  console.log("Starting Peril client...");
-
   const conn = await amqp.connect(rabbitConnString);
-  console.log("Connection was successful ");
+  console.log("Peril game client connected to RabbitMQ!");
+
+  ["SIGINT", "SIGTERM"].forEach((signal) =>
+    process.on(signal, async () => {
+      try {
+        await conn.close();
+        console.log("RabbitMQ connection closed.");
+      } catch (err) {
+        console.error("Error closing RabbitMQ connection:", err);
+      } finally {
+        process.exit(0);
+      }
+    }),
+  );
 
   const username = await clientWelcome();
-
-  const queueName = `pause.${username}`;
-
-  await declareAndBind(
-    conn,
-    ExchangePerilDirect,
-    queueName,
-    PauseKey,
-    SimpleQueueType.Transient,
-  );
-
   const gs = new GameState(username);
-  const channel = await conn.createConfirmChannel();
-
-  await subscribeJSON(
-    conn,
-    ExchangePerilDirect,
-    queueName,
-    PauseKey,
-    SimpleQueueType.Transient,
-    handlerPause(gs),
-  );
-
-  const moveQueue = `army_moves.${username}`;
+  const publishCh = await conn.createConfirmChannel();
 
   await subscribeJSON(
     conn,
     ExchangePerilTopic,
-    moveQueue,
+    `${ArmyMovesPrefix}.${username}`,
     `${ArmyMovesPrefix}.*`,
     SimpleQueueType.Transient,
     handlerMove(gs),
+  );
+
+  await subscribeJSON(
+    conn,
+    ExchangePerilDirect,
+    `${PauseKey}.${username}`,
+    PauseKey,
+    SimpleQueueType.Transient,
+    handlerPause(gs),
   );
 
   while (true) {
@@ -69,43 +66,36 @@ async function main() {
       continue;
     }
     const command = words[0];
-
-    switch (command) {
-      case "spawn":
-        try {
-          commandSpawn(gs, words);
-        } catch (err) {
-          console.log((err as Error).message);
-        }
-        break;
-
-      case "move":
-        try {
-          const move = commandMove(gs, words);
-          await publishJSON(channel, ExchangePerilTopic, moveQueue, move);
-        } catch (err) {
-          console.log((err as Error).message);
-        }
-        break;
-
-      case "status":
-        await commandStatus(gs);
-        break;
-
-      case "help":
-        printClientHelp();
-        break;
-
-      case "spam":
-        console.log("Spamming not allowed yet!");
-        break;
-
-      case "quit":
-        printQuit();
-        process.exit(0);
-
-      default:
-        console.log("I don't understand the command");
+    if (command === "move") {
+      try {
+        const move = commandMove(gs, words);
+        publishJSON(
+          publishCh,
+          ExchangePerilTopic,
+          `${ArmyMovesPrefix}.${username}`,
+          move,
+        );
+      } catch (err) {
+        console.log((err as Error).message);
+      }
+    } else if (command === "status") {
+      commandStatus(gs);
+    } else if (command === "spawn") {
+      try {
+        commandSpawn(gs, words);
+      } catch (err) {
+        console.log((err as Error).message);
+      }
+    } else if (command === "help") {
+      printClientHelp();
+    } else if (command === "quit") {
+      printQuit();
+      process.exit(0);
+    } else if (command === "spam") {
+      console.log("Spamming not allowed yet!");
+    } else {
+      console.log("Unknown command");
+      continue;
     }
   }
 }

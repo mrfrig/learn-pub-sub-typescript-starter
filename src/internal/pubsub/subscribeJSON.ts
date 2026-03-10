@@ -16,7 +16,7 @@ export async function subscribeJSON<T>(
   queueType: SimpleQueueType,
   handler: (data: T) => AckType,
 ): Promise<void> {
-  const [channel, queue] = await declareAndBind(
+  const [ch, queue] = await declareAndBind(
     conn,
     exchange,
     queueName,
@@ -24,22 +24,41 @@ export async function subscribeJSON<T>(
     queueType,
   );
 
-  channel.consume(queueName, (msg: amqp.ConsumeMessage | null) => {
-    if (msg === null) return;
+  await ch.consume(queue.queue, function (msg: amqp.ConsumeMessage | null) {
+    if (!msg) return;
 
-    const content = JSON.parse(msg.content.toString());
-    const actType = handler(content);
-
-    if (actType === AckType.Ack) {
-      console.log("Message processed successfully");
-      channel.ack(msg);
-    } else if (actType === AckType.NackRequeue) {
-      console.log("Message not processed successfully, retrying");
-      channel.nack(msg, false, true);
-    } else {
-      console.log("Message not processed successfully, discarding");
-      channel.nack(msg, false, false);
+    let data: T;
+    try {
+      data = JSON.parse(msg.content.toString());
+    } catch (err) {
+      console.error("Could not unmarshal message:", err);
+      return;
     }
-    process.stdout.write("> ");
+
+    try {
+      const result = handler(data);
+      switch (result) {
+        case AckType.Ack:
+          ch.ack(msg);
+          console.log("Ack");
+          break;
+        case AckType.NackDiscard:
+          ch.nack(msg, false, false);
+          console.log("NackDiscard");
+          break;
+        case AckType.NackRequeue:
+          ch.nack(msg, false, true);
+          console.log("NackRequeue");
+          break;
+        default:
+          const unreachable: never = result;
+          console.error("Unexpected ack type:", unreachable);
+          return;
+      }
+    } catch (err) {
+      console.error("Error handling message:", err);
+      ch.nack(msg, false, false);
+      return;
+    }
   });
 }

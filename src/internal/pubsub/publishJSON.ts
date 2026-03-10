@@ -1,4 +1,4 @@
-import type { ConfirmChannel } from "amqplib";
+import { type ConfirmChannel } from "amqplib";
 
 export function publishJSON<T>(
   ch: ConfirmChannel,
