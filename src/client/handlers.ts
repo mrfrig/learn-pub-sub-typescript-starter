@@ -40,13 +40,17 @@ export function handlerMove(
             attacker: move.player,
             defender: gs.getPlayerSnap(),
           };
-          await publishJSON(
-            publishCh,
-            ExchangePerilTopic,
-            `${WarRecognitionsPrefix}.${gs.getUsername()}`,
-            rw,
-          );
-          return AckType.NackRequeue;
+          try {
+            await publishJSON(
+              publishCh,
+              ExchangePerilTopic,
+              `${WarRecognitionsPrefix}.${gs.getUsername()}`,
+              rw,
+            );
+            return AckType.Ack;
+          } catch (error) {
+            return AckType.NackRequeue;
+          }
 
         default:
           return AckType.NackDiscard;
