@@ -78,6 +78,7 @@ export async function subscribe<T>(
     routingKey,
     simpleQueueType,
   );
+  await ch.prefetch(1);
 
   await ch.consume(
     queue.queue,

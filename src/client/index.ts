@@ -4,6 +4,7 @@ import {
   clientWelcome,
   commandStatus,
   getInput,
+  getMaliciousLog,
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
@@ -114,7 +115,16 @@ async function main() {
       printQuit();
       process.exit(0);
     } else if (command === "spam") {
-      console.log("Spamming not allowed yet!");
+      const n = parseInt(words[1] || "", 10);
+      if (Number.isNaN(n)) {
+        console.log(
+          "You need to provide a valid number as the second argument",
+        );
+      }
+      for (let index = 0; index < n; index++) {
+        const msg = getMaliciousLog();
+        await publishGameLog(publishCh, gs.getUsername(), msg);
+      }
     } else {
       console.log("Unknown command");
       continue;
