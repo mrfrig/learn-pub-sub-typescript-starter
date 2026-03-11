@@ -1,6 +1,7 @@
 import amqp from "amqplib";
+import { handlerLog } from "../client/handlers.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
-import { declareAndBind } from "../internal/pubsub/declareAndBind.js";
+import { subscribeMsgPack } from "../internal/pubsub/consume.js";
 import { SimpleQueueType } from "../internal/pubsub/enums.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import {
@@ -30,12 +31,13 @@ async function main() {
 
   const publishCh = await conn.createConfirmChannel();
 
-  await declareAndBind(
+  await subscribeMsgPack(
     conn,
     ExchangePerilTopic,
     GameLogSlug,
     `${GameLogSlug}.*`,
     SimpleQueueType.Durable,
+    handlerLog,
   );
 
   printServerHelp();

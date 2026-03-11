@@ -6,10 +6,11 @@ import type {
   GameState,
   PlayingState,
 } from "../internal/gamelogic/gamestate.js";
+import { writeLog, type GameLog } from "../internal/gamelogic/logs.js";
 import { handleMove, MoveOutcome } from "../internal/gamelogic/move.js";
 import { handlePause } from "../internal/gamelogic/pause.js";
 import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
-import { AckType } from "../internal/pubsub/subscribeJSON.js";
+import { AckType } from "../internal/pubsub/consume.js";
 
 export function handlerPause(gs: GameState): (ps: PlayingState) => AckType {
   return (ps: PlayingState): AckType => {
@@ -97,10 +98,19 @@ export function handlerWar(
           console.log("An error happened");
           return AckType.NackDiscard;
       }
-    } catch {
-      return AckType.NackRequeue;
     } finally {
       process.stdout.write("> ");
     }
   };
+}
+
+export async function handlerLog(data: GameLog): Promise<AckType> {
+  try {
+    await writeLog(data);
+    return AckType.Ack;
+  } catch (error) {
+    return AckType.NackRequeue;
+  } finally {
+    process.stdout.write("> ");
+  }
 }
