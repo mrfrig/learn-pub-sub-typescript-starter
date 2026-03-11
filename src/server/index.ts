@@ -2,7 +2,7 @@ import amqp from "amqplib";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind } from "../internal/pubsub/declareAndBind.js";
 import { SimpleQueueType } from "../internal/pubsub/enums.js";
-import { publishJSON } from "../internal/pubsub/publishJSON.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
 import {
   ExchangePerilDirect,
   ExchangePerilTopic,

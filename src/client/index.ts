@@ -10,7 +10,7 @@ import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { SimpleQueueType } from "../internal/pubsub/enums.js";
-import { publishJSON } from "../internal/pubsub/publishJSON.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
 import { subscribeJSON } from "../internal/pubsub/subscribeJSON.js";
 import {
   ArmyMovesPrefix,

@@ -10,7 +10,7 @@ import type {
 import { handleMove, MoveOutcome } from "../internal/gamelogic/move.js";
 import { handlePause } from "../internal/gamelogic/pause.js";
 import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
-import { publishJSON } from "../internal/pubsub/publishJSON.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
 import { AckType } from "../internal/pubsub/subscribeJSON.js";
 import {
   ExchangePerilTopic,
