@@ -1,4 +1,5 @@
-import amqp from "amqplib";
+import amqp, { type ConfirmChannel } from "amqplib";
+import type { RecognitionOfWar } from "../internal/gamelogic/gamedata.js";
 import {
   clientWelcome,
   commandStatus,
@@ -7,15 +8,17 @@ import {
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
+import type { GameLog } from "../internal/gamelogic/logs.js";
 import { commandMove } from "../internal/gamelogic/move.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { SimpleQueueType } from "../internal/pubsub/enums.js";
-import { publishJSON } from "../internal/pubsub/publish.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import { subscribeJSON } from "../internal/pubsub/subscribeJSON.js";
 import {
   ArmyMovesPrefix,
   ExchangePerilDirect,
   ExchangePerilTopic,
+  GameLogSlug,
   PauseKey,
   WarRecognitionsPrefix,
 } from "../internal/routing/routing.js";
@@ -49,7 +52,14 @@ async function main() {
     `${ArmyMovesPrefix}.${username}`,
     `${ArmyMovesPrefix}.*`,
     SimpleQueueType.Transient,
-    handlerMove(gs, publishCh),
+    handlerMove(gs, (rw: RecognitionOfWar) =>
+      publishJSON(
+        publishCh,
+        ExchangePerilTopic,
+        `${WarRecognitionsPrefix}.${gs.getUsername()}`,
+        rw,
+      ),
+    ),
   );
 
   await subscribeJSON(
@@ -67,7 +77,9 @@ async function main() {
     WarRecognitionsPrefix,
     `${WarRecognitionsPrefix}.*`,
     SimpleQueueType.Durable,
-    handlerWar(gs),
+    handlerWar(gs, (msg: string) =>
+      publishGameLog(publishCh, gs.getUsername(), msg),
+    ),
   );
 
   while (true) {
@@ -108,6 +120,25 @@ async function main() {
       continue;
     }
   }
+}
+
+async function publishGameLog(
+  channel: ConfirmChannel,
+  username: string,
+  message: string,
+) {
+  const gameLog: GameLog = {
+    currentTime: new Date(),
+    message,
+    username,
+  };
+
+  await publishMsgPack(
+    channel,
+    ExchangePerilTopic,
+    `${GameLogSlug}.${username}`,
+    gameLog,
+  );
 }
 
 main().catch((err) => {
